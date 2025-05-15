@@ -388,6 +388,62 @@ def obtenir_etablissements_par_nom(nom):
         traceback.print_exc()
         return False, f"Exception: {str(e)}"
 
+def rechercher_apprenants_par_date_et_etablissement(date_depart, etablissement):
+    """
+    Recherche les apprenants par date de départ et établissement.
+    
+    Args:
+        date_depart (str): Date de départ dans n'importe quel format supporté
+        etablissement (str): Nom de l'établissement (EPLEFPA)
+        
+    Returns:
+        tuple: (success, result) où result est la liste des apprenants ou un message d'erreur
+    """
+    try:
+        # Transformer la date au format ISO8601 pour la requête SQL
+        date_depart_iso = transformer_date(date_depart)
+        
+        if not date_depart_iso:
+            return False, "Format de date non valide"
+        
+        print(f"Recherche d'apprenants avec date de départ: {date_depart_iso} et établissement: {etablissement}")
+        client = get_mysql_client()
+        
+        if not client.connect():
+            return False, "Impossible de se connecter à la base de données"
+        
+        # Recherche des apprenants pour cette date et cet établissement
+        query = f"""
+        SELECT * 
+        FROM {MYSQL_TABLE} 
+        WHERE {COL_DATE_DEPART} = %s AND {COL_EPLEFPA} = %s
+        """
+        
+        results = client.execute_query(query, (date_depart_iso, etablissement))
+        client.disconnect()
+        
+        if not results:
+            return False, "Aucun apprenant trouvé pour cette date et cet établissement."
+        
+        # Préparer la liste des apprenants
+        apprenants = []
+        for dossier in results:
+            # Mapper les données pour l'API
+            mapped_data = mapper_donnees_mobilite(dossier)
+            # Ajouter l'ID et le numéro de dossier pour référence
+            mapped_data["id"] = dossier.get(COL_ID)
+            mapped_data["dossier_number"] = dossier.get(COL_DOSSIER_NUMBER)
+            apprenants.append(mapped_data)
+        
+        print(f"Trouvé {len(apprenants)} apprenant(s)")
+        return True, apprenants
+    
+    except Exception as e:
+        print(f"Exception lors de la recherche des apprenants: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return False, f"Exception: {str(e)}"
+
 
 def mapper_donnees_mobilite(dossier_fields):
     """
