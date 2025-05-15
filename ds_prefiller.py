@@ -172,6 +172,54 @@ def test_api_connection():
     
     return generate_prefilled_url(test_data)
 
+def generate_short_url(data_dict):
+    """
+    Génère une URL courte et explicite pour un dossier pré-rempli.
+    Inclut le nom de l'apprenant dans l'URL pour une meilleure lisibilité.
+    
+    Args:
+        data_dict (dict): Dictionnaire des données du formulaire
+        
+    Returns:
+        tuple: (success, result) où result est l'URL courte ou un message d'erreur
+    """
+    # D'abord, générer l'URL standard
+    success, url = generate_prefilled_url(data_dict)
+    
+    if not success:
+        return False, url  # Renvoyer l'erreur
+    
+    try:
+        # Extraire le nom et le prénom pour un lien plus descriptif
+        nom = data_dict.get("nom", "").lower().replace(" ", "-")
+        prenom = data_dict.get("prenom", "").lower().replace(" ", "-")
+        
+        # Construire un identifiant unique en utilisant la date de départ
+        date_depart = data_dict.get("date_depart", "")
+        if date_depart:
+            # Convertir la date en chaîne sans séparateurs pour l'URL
+            if isinstance(date_depart, str):
+                date_str = date_depart.replace("-", "")[:8]  # Format YYYYMMDD
+            else:
+                date_str = date_depart.strftime("%Y%m%d")
+        else:
+            # Utiliser la date actuelle si la date de départ n'est pas disponible
+            date_str = datetime.now().strftime("%Y%m%d")
+        
+        # Créer un identifiant unique pour l'URL
+        nom_url = f"{prenom}-{nom}-{date_str}"
+        
+        # Construire l'URL courte en intégrant l'identifiant
+        # Comme nous ne pouvons pas vraiment raccourcir l'URL de Démarches Simplifiées,
+        # nous allons simplement ajouter cet identifiant comme ancre à l'URL
+        short_url = f"{url}#{nom_url}"
+        
+        return True, short_url
+    except Exception as e:
+        print(f"Erreur lors de la génération de l'URL courte: {e}")
+        # En cas d'erreur, revenir à l'URL standard
+        return success, url
+
 # Code pour tester le module si exécuté directement
 if __name__ == "__main__":
     success, result = test_api_connection()
